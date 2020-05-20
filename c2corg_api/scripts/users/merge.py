@@ -167,10 +167,9 @@ def _transfer_tags(source_user_id, target_user_id):
     )
 
     # remove remaining tags
-    removed_document_ids_result = DBSession.execute(
+    DBSession.execute(
         DocumentTag.__table__.delete().
-        where(DocumentTag.user_id == source_user_id).
-        returning(DocumentTag.document_id)
+        where(DocumentTag.user_id == source_user_id)
     )
 
     # remove all existing logs
@@ -191,21 +190,6 @@ def _transfer_tags(source_user_id, target_user_id):
     if len(transfered_document_ids):
         DBSession.execute(
             DocumentTagLog.__table__.insert().values(transfered_document_ids))
-
-    # as well as for the removed tags in order to purge them from ES
-    # FIXME those tag logs then remain in the DB despite the related
-    # user no longer exists...
-    removed_document_ids = [{
-        'document_id': document_id,
-        'user_id': source_user_id,
-        # FIXME OK as long as tags are only used for routes:
-        'document_type': ROUTE_TYPE,
-        'is_creation': False,
-        'written_at': func.now(),
-    } for (document_id,) in removed_document_ids_result]
-    if len(removed_document_ids):
-        DBSession.execute(
-            DocumentTagLog.__table__.insert().values(removed_document_ids))
 
 
 def _update_feed_entries(source_user_id, target_user_id):
